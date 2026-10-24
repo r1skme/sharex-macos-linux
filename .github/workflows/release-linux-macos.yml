@@ -63,7 +63,7 @@ jobs:
           plutil -lint "$RUNNER_TEMP/unpacked/ShareX.app/Contents/Info.plist"
           codesign --verify --deep "$RUNNER_TEMP/unpacked/ShareX.app"
           hdiutil verify "$RUNNER_TEMP"/packages/*.dmg
-          pkgutil --payload-files "$RUNNER_TEMP"/packages/*.pkg | grep '^Applications/ShareX.app/Contents/MacOS/ShareX$'
+          pkgutil --payload-files "$RUNNER_TEMP"/packages/*.pkg | grep 'Applications/ShareX.app/Contents/MacOS/ShareX$'
       - name: Launch app
         run: |
           export HOME="$RUNNER_TEMP/home"
