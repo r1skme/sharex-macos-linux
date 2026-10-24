@@ -65,4 +65,5 @@ jobs:
           path: |
             ${{ runner.temp }}/package/ShareX-*-macos-arm64.zip
             ${{ runner.temp }}/package/ShareX-*-macos-arm64.dmg
+            ${{ runner.temp }}/package/ShareX-*-macos-arm64.pkg
           if-no-files-found: error

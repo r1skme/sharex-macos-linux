@@ -1,0 +1,109 @@
+name: Release Linux and macOS
+
+on:
+  push:
+    tags:
+      - "v*-cross-platform*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish
+        required: true
+        default: v22.0.0-cross-platform.1
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux x64 packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Install RPM tooling
+        run: sudo apt-get update -q && sudo apt-get install -yq rpm >/dev/null
+      - name: Build packages
+        run: Scripts/package-linux.sh "$RUNNER_TEMP/packages"
+      - name: Verify packages
+        run: |
+          dpkg-deb --contents "$RUNNER_TEMP"/packages/*.deb | grep 'opt/sharex/app/ShareX$'
+          rpm -qpl "$RUNNER_TEMP"/packages/*.rpm | grep '^/opt/sharex/app/ShareX$'
+          tar -tzf "$RUNNER_TEMP"/packages/*.tar.gz | grep '/app/ShareX$'
+          cmp "$RUNNER_TEMP"/packages/*.tar.gz "$RUNNER_TEMP"/packages/*.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: ${{ runner.temp }}/packages/*
+          if-no-files-found: error
+
+  macos:
+    name: macOS ${{ matrix.arch }} packages
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+          - arch: x64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build packages
+        run: Scripts/package-macos.sh "${{ matrix.arch }}" "$RUNNER_TEMP/packages"
+      - name: Verify app and installer
+        run: |
+          ditto -x -k "$RUNNER_TEMP"/packages/*.zip "$RUNNER_TEMP/unpacked"
+          plutil -lint "$RUNNER_TEMP/unpacked/ShareX.app/Contents/Info.plist"
+          codesign --verify --deep "$RUNNER_TEMP/unpacked/ShareX.app"
+          hdiutil verify "$RUNNER_TEMP"/packages/*.dmg
+          pkgutil --payload-files "$RUNNER_TEMP"/packages/*.pkg | grep '^Applications/ShareX.app/Contents/MacOS/ShareX$'
+      - name: Launch app
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          mkdir -p "$HOME/Documents/ShareX"
+          echo '{ "ShowStartScreen": false }' > "$HOME/Documents/ShareX/ApplicationConfig.json"
+          "$RUNNER_TEMP/unpacked/ShareX.app/Contents/MacOS/ShareX" -silent -NoHotkeys & pid=$!
+          log="$HOME/Documents/ShareX/Logs"
+          for i in $(seq 1 90); do
+            grep -qs "Startup time" "$log"/ShareX-Log-*.txt && break
+            sleep 1
+          done
+          kill -TERM "$pid"
+          wait "$pid" || true
+          cat "$log"/ShareX-Log-*.txt
+          grep -q "Startup time" "$log"/ShareX-Log-*.txt
+          grep -q "ShareX closed" "$log"/ShareX-Log-*.txt
+          ! grep -q "Unhandled exception" "$log"/ShareX-Log-*.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: ${{ runner.temp }}/packages/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: [linux, macos]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums
+        run: (cd artifacts && sha256sum * > SHA256SUMS.txt)
+      - name: Create release
+        run: |
+          gh release create "$RELEASE_TAG" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "ShareX 22.0.0 for Linux and macOS" \
+            --notes "Cross-platform ShareX 22.0.0 builds for Linux and macOS. Linux packages include DEB, RPM, tar.gz and tgz formats. macOS packages include PKG installers, DMG images and ZIP application bundles for Apple silicon and Intel. The macOS installer assigns Command+Shift+4 to ShareX region capture; Linux defaults to Ctrl+PrintScreen."

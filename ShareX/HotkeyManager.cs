@@ -231,11 +231,11 @@ namespace ShareX
         {
             if (!PlatformServices.Current.SystemInfo.KeyboardHasPrintScreen)
             {
-                // Mac keyboards have no Print Screen key: macOS's own capture keys with Option instead of Command, so they do not
-                // clash with the system (Command+Shift+3, 4 and 5).
+                // Mac keyboards have no Print Screen key. The macOS package disables Apple's region-capture shortcut so ShareX can
+                // use the familiar Command+Shift+4 combination instead.
                 return new List<HotkeySettings>
                 {
-                    new HotkeySettings(HotkeyType.RectangleRegion, InputKey.Alt | InputKey.Shift | InputKey.D4),
+                    new HotkeySettings(HotkeyType.RectangleRegion, InputKey.Shift | InputKey.D4) { HotkeyInfo = { Win = true } },
                     new HotkeySettings(HotkeyType.PrintScreen, InputKey.Alt | InputKey.Shift | InputKey.D3),
                     new HotkeySettings(HotkeyType.ActiveWindow, InputKey.Alt | InputKey.Shift | InputKey.D7),
                     new HotkeySettings(HotkeyType.ScreenRecorder, InputKey.Alt | InputKey.Shift | InputKey.D5),

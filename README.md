@@ -15,6 +15,14 @@
 
 # ShareX - Free Screen Capture, Screenshot, File Sharing and Productivity Tool
 
+## Linux and macOS builds
+
+This repository publishes the cross-platform ShareX application for Linux and macOS. Linux releases include `.deb`, `.rpm`, `.tar.gz` and `.tgz` packages; macOS releases include `.pkg`, `.dmg` and `.zip` packages for Apple silicon and Intel.
+
+The default region-capture shortcut is `Ctrl+PrintScreen` on Linux. The macOS `.pkg` installer replaces Apple's region shortcut with ShareX on `Command+Shift+4`; the original shortcut can be restored in System Settings > Keyboard > Keyboard Shortcuts > Screenshots.
+
+See [the releases page](https://github.com/frstv/sharex-macos-linux/releases) for installers and checksums.
+
 ShareX is a free and open source screenshot tool, screen recorder, file sharing tool and productivity application for Windows. It is designed for users who need fast screen capture, powerful screenshot editing, automated sharing, custom upload destinations and practical utilities in one lightweight desktop app.
 
 With ShareX, you can capture any area of your screen, record video or GIFs, annotate screenshots, upload files, copy shareable links, extract text with OCR, scan QR codes, pick colors and run custom workflows from hotkeys. ShareX is built for speed and control: capture a screenshot, edit it, save it, copy it, upload it or pass it through your own task chain with minimal manual work.

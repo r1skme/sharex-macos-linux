@@ -1,0 +1,18 @@
+#!/bin/sh
+# Give ShareX the standard macOS region shortcut requested by this distribution.
+# The change is made for the user logged in at installation time; it can be undone in
+# System Settings > Keyboard > Keyboard Shortcuts > Screenshots.
+set -eu
+
+console_user="$(/usr/bin/stat -f '%Su' /dev/console)"
+if [ -z "$console_user" ] || [ "$console_user" = "root" ] || [ "$console_user" = "loginwindow" ]; then
+  exit 0
+fi
+
+console_uid="$(/usr/bin/id -u "$console_user")"
+/bin/launchctl asuser "$console_uid" /usr/bin/sudo -u "$console_user" \
+  /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 30 '{ enabled = 0; }'
+
+# SystemUIServer owns Apple's screenshot shortcuts. Restarting it applies the preference immediately.
+/bin/launchctl asuser "$console_uid" /usr/bin/sudo -u "$console_user" /usr/bin/killall SystemUIServer >/dev/null 2>&1 || true
+exit 0

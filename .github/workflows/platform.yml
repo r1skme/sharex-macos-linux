@@ -8,6 +8,7 @@ on:
       - "Directory.Packages.props"
       - "ShareX.sln"
       - "Scripts/package-macos.sh"
+      - "Scripts/package-linux.sh"
       - "Scripts/macos/**"
       - ".github/workflows/platform.yml"
   pull_request:
@@ -17,6 +18,7 @@ on:
       - "Directory.Packages.props"
       - "ShareX.sln"
       - "Scripts/package-macos.sh"
+      - "Scripts/package-linux.sh"
       - "Scripts/macos/**"
       - ".github/workflows/platform.yml"
 
@@ -185,6 +187,7 @@ jobs:
           path: |
             ${{ runner.temp }}/package/*.zip
             ${{ runner.temp }}/package/*.dmg
+            ${{ runner.temp }}/package/*.pkg
           if-no-files-found: error
 
       - name: Remove signing keychain

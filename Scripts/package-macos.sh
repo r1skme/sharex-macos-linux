@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds ShareX.app for macOS and packages it as a zip and, on a Mac, a disk image.
+# Builds ShareX.app for macOS and packages it as a zip and, on a Mac, a PKG installer and disk image.
 #
 #   Scripts/package-macos.sh [arm64|x64] [OUTPUT_DIR]     default: arm64 into ./artifacts
 #
@@ -9,6 +9,7 @@
 # A signed build is notarized and stapled when one of these is set as well:
 #   MACOS_NOTARY_PROFILE                                   a notarytool keychain profile (xcrun notarytool store-credentials)
 #   MACOS_NOTARY_KEY, MACOS_NOTARY_KEY_ID, MACOS_NOTARY_ISSUER   an App Store Connect API key (.p8 path), its id and issuer
+# Set MACOS_INSTALLER_IDENTITY to a Developer ID Installer identity to sign and notarize the PKG as well.
 # A bundle built off a Mac must be signed on one first:  codesign --force --deep --sign - ShareX.app
 # Users install by moving ShareX.app to /Applications. ShareX asks for Screen Recording permission the first time it captures.
 set -euo pipefail
@@ -157,6 +158,39 @@ else
   (cd "$staging" && zip -qry "$zip_path" ShareX.app)
 fi
 echo "Package: $zip_path ($signed)"
+
+# The installer puts ShareX in /Applications and disables Apple's Command+Shift+4 region shortcut for the user who installs it.
+# ShareX uses that combination as its default region-capture hotkey.
+if command -v pkgbuild >/dev/null; then
+  pkg_root="$staging/pkg-root"
+  pkg_scripts="$staging/pkg-scripts"
+  mkdir -p "$pkg_root/Applications" "$pkg_scripts"
+  cp -R "$app" "$pkg_root/Applications/"
+  cp "$repo/Scripts/macos/postinstall" "$pkg_scripts/postinstall"
+  chmod +x "$pkg_scripts/postinstall"
+
+  pkg_path="$out/ShareX-$version-macos-$arch.pkg"
+  unsigned_pkg="$staging/ShareX-unsigned.pkg"
+  rm -f "$pkg_path" "$unsigned_pkg"
+  pkgbuild --quiet --root "$pkg_root" --scripts "$pkg_scripts" --identifier com.getsharex.ShareX \
+    --version "$version" --install-location / "$unsigned_pkg"
+
+  if [ -n "${MACOS_INSTALLER_IDENTITY:-}" ]; then
+    productsign --sign "$MACOS_INSTALLER_IDENTITY" "$unsigned_pkg" "$pkg_path"
+    pkgutil --check-signature "$pkg_path"
+    if can_notarize; then
+      notarize "$pkg_path"
+      xcrun stapler staple "$pkg_path"
+    fi
+    pkg_signed="signed by $MACOS_INSTALLER_IDENTITY"
+  else
+    mv "$unsigned_pkg" "$pkg_path"
+    pkg_signed="unsigned installer; the bundled app is $signed"
+  fi
+
+  pkgutil --payload-files "$pkg_path" | grep -q '^Applications/ShareX.app/Contents/MacOS/ShareX$'
+  echo "Installer: $pkg_path ($pkg_signed)"
+fi
 
 # The disk image opens to ShareX.app beside a link to /Applications to drag it onto.
 if command -v hdiutil >/dev/null; then
