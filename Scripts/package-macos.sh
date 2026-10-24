@@ -188,7 +188,7 @@ if command -v pkgbuild >/dev/null; then
     pkg_signed="unsigned installer; the bundled app is $signed"
   fi
 
-  pkgutil --payload-files "$pkg_path" | grep -q '^Applications/ShareX.app/Contents/MacOS/ShareX$'
+  pkgutil --payload-files "$pkg_path" | grep '^Applications/ShareX.app/Contents/MacOS/ShareX$' >/dev/null
   echo "Installer: $pkg_path ($pkg_signed)"
 fi
 
