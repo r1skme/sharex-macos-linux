@@ -103,13 +103,24 @@ chmod +x "$app_dir/ShareX"
 ln -sf "$app_dir/ShareX" "$bin_link"
 cp "$icon_source" "$icon_file"
 
+desktop_entry_quote() {
+    local value="${1//\\/\\\\\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//\$/\\\\\$}"
+    value="${value//\`/\\\`}"
+    value="${value//%/%%}"
+    printf '"%s"' "$value"
+}
+
+desktop_exec=$(desktop_entry_quote "$bin_link")
+
 cat >"$desktop_file" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=ShareX
 GenericName=Screenshot and upload tool
 Comment=Capture, annotate and share screenshots
-Exec=$bin_link %F
+Exec=$desktop_exec %F
 Icon=sharex
 Terminal=false
 StartupWMClass=ShareX
@@ -118,15 +129,15 @@ Actions=Region;FullScreen;Window;
 
 [Desktop Action Region]
 Name=Capture region
-Exec=$bin_link -RectangleRegion
+Exec=$desktop_exec -RectangleRegion
 
 [Desktop Action FullScreen]
 Name=Capture full screen
-Exec=$bin_link -PrintScreen
+Exec=$desktop_exec -PrintScreen
 
 [Desktop Action Window]
 Name=Capture active window
-Exec=$bin_link -ActiveWindow
+Exec=$desktop_exec -ActiveWindow
 DESKTOP
 
 command -v update-desktop-database >/dev/null && update-desktop-database "$prefix/share/applications" 2>/dev/null || true
